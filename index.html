@@ -1,0 +1,182 @@
+<html xmlns="http://www.w3.org/1999/html"><head>
+    <title>Voice Chat</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="http://pingendo.github.io/pingendo-bootstrap/themes/default/bootstrap.css" rel="stylesheet" type="text/css">
+
+    <script type="text/javascript">
+var websocket;
+$(document).ready(init);
+
+function init() {
+  $('#server').val("ws://" + window.location.host);
+  if(!("WebSocket" in window)){
+    $('#status').append('<p><span style="color: red;">websockets are not supported </span></p>');
+    $("#navigation").hide();
+  } else {
+    $('#status').append('<p><span style="color: green;">websockets are supported </span></p>');
+    connect();
+  };
+  $("#connected").hide();
+  $("#content").hide();
+};
+
+function connect()
+{
+  wsHost = $("#server").val();
+  websocket = new WebSocket(wsHost, ['echo-protocol','soap', 'xmpp']);
+  showScreen('SYSTEM', '<b>Connecting to: ' +  wsHost + '</b>');
+  websocket.onopen = function(evt) { onOpen(evt) };
+  websocket.onclose = function(evt) { onClose(evt) };
+  websocket.onmessage = function(evt) { onMessage(evt) };
+  websocket.onerror = function(evt) { onError(evt) };
+};
+
+function disconnect() {
+  websocket.close();
+};
+
+function toggle_connection(){
+  if(websocket.readyState == websocket.OPEN){
+    disconnect();
+  } else {
+    connect();
+  };
+};
+
+function sendTxt(text) {
+  if(websocket.readyState == websocket.OPEN){
+    if(text == null){ text = $("#send_txt").val(); }
+    websocket.send(text);
+    showScreen('You', '<span style="color: green;">' + text + '</span>');
+  } else {
+    showScreen('SYSTEM', 'websocket is not connected');
+  };
+};
+
+function onOpen(evt) {
+  showScreen('SYSTEM', '<span style="color: green;">CONNECTED </span>');
+  $("#connected").fadeIn('slow');
+  $("#content").fadeIn('slow');
+};
+
+function onClose(evt) {
+  showScreen('SYSTEM', '<span style="color: red;">DISCONNECTED</span>');
+};
+
+function onMessage(evt) {
+  var body = evt.data;
+  sound(body);
+  showScreen('RESPONSE', '<span style="color: blue;">' + body + '</span>');
+};
+
+function onError(evt) {
+  showScreen('ERROR', '<span style="color: red;">' + evt.data+ '</span>');
+};
+
+function showScreen(name, txt) {
+  $("#content").hide();
+  $('#output').prepend('<div class="well"><h4>' + name + '</h4><p>' + txt + '</p></div>')
+    $("#content").fadeIn('fast');
+};
+
+function clearScreen()
+{
+  $('#output').html("");
+};
+    </script>
+  </head>
+  <body>
+
+    <div class="section">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-12">
+            <h2>Voice Chat</h2>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="col-md-6">
+              <div class="form-group">
+                <div class="col-sm-2">
+                  <label for="send_txt" class="control-label">Message</label>
+                </div>
+                <div class="col-sm-8">
+                  <input type="text" id="send_txt" class="form-control" placeholder="message">
+                </div>
+                <div class="col-sm-2">
+                  <button type="button" class="btn btn-default" onclick="sendTxt()">send</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <div class="col-sm-2">
+                  <label for="server" class="control-label">Connect Server</label>
+                </div>
+                <div class="col-sm-8">
+                  <input type="text" id='server' class="form-control" placeholder="address">
+                </div>
+                <div class="col-sm-2">
+                  <button type="button" class="btn btn-default" onclick="toggle_connection()">connect</button>
+                </div>
+                <div id="connected"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="col-md-6">
+              <button class="btn btn-info" id="speak">Wanna say something?</button>
+            </div>
+            <div class="col-md-6">
+              <button class="btn btn-danger" id="clear" onclick="clearScreen()">Clear text</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+          </div>
+          <div class="col-md-12" id="content">
+            <div id="output">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+var speech = new webkitSpeechRecognition();
+var btn = document.getElementById('speak');
+console.log(document.getElementById('speak'));
+var content = document.getElementById('content');
+var speech = new webkitSpeechRecognition();
+speech.lang = "en";
+
+btn.addEventListener( 'click' , function() {
+  console.log("start speech");
+  speech.start();
+} );
+
+speech.addEventListener( 'result' , function( e ) {
+  console.log(e);
+  sendTxt(e.results[0][0].transcript);
+} );
+
+function sound(text){
+  var u = new SpeechSynthesisUtterance();
+  voices = window.speechSynthesis.getVoices();
+  u.text = text;
+  u.lang = 'en-US';
+  u.rate = 1.1;
+  //u.voice = voices[0];
+  u.onend = function(event) { console.log('Finished in ' + event.elapsedTime + ' seconds.'); }
+  speechSynthesis.speak(u);
+}
+    </script>
+  </body>
+</html>
